@@ -8,6 +8,27 @@ from tqdm import tqdm
 from torchvision import transforms
 from torch.optim.lr_scheduler import StepLR
 import numpy as np
+import numpy as np
+import pandas as pd
+from multiprocessing import Pool
+from functools import partial
+
+def get_labels_from_csv(csv_path):
+    """Read labels from Jester CSV."""
+    df = pd.read_csv(csv_path, sep=';')
+    # Assuming CSV has columns 'video_id' and 'label' (adjust if different)
+    labels = df['label'].values
+    return labels
+
+def get_labels_parallel(dataset, num_processes=32):
+    """Collect labels using multiprocessing."""
+    def get_label(idx):
+        return dataset[idx][1]
+    
+    with Pool(processes=num_processes) as pool:
+        labels = list(tqdm(pool.imap(get_label, range(len(dataset))), 
+                           total=len(dataset), desc="Collecting labels"))
+    return labels
 
 def train(num_epochs, batch_size, lr):
     # Define transforms for data augmentation and normalization
@@ -30,7 +51,14 @@ def train(num_epochs, batch_size, lr):
     print(f"Validation loader size: {len(val_loader)}")
 
     # Compute class weights for imbalanced dataset
-    labels = [train_dataset[i][1] for i in range(len(train_dataset))]
+
+    csv_path = 'annotations/train.csv'  # Adjust path if needed
+    try:
+        labels = get_labels_from_csv(csv_path)
+        print("Labels loaded from CSV")
+    except FileNotFoundError:
+        print("CSV not found, collecting labels with multiprocessing...")
+        labels = get_labels_parallel(train_dataset, num_processes=48)
     class_counts = np.bincount(labels, minlength=27)
     weights = 1.0 / torch.tensor(class_counts, dtype=torch.float)
     weights = weights / weights.sum() * 27  # Normalize weights
