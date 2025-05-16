@@ -46,7 +46,6 @@ def train(num_epochs, batch_size, lr):
         for clips, joints, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
             clips, joints, labels = clips.to(device), joints.to(device), labels.to(device)
             clips = clips.permute(0, 2, 1, 3, 4)  # [B, T, C, H, W] -> [B, C, T, H, W]
-            print(f"clips shape: {clips.shape}, joints shape: {joints.shape}")
             optimizer.zero_grad()
             outputs = model(clips, joints)
             loss = criterion(outputs, labels)
