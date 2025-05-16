@@ -49,7 +49,7 @@ def train(num_epochs, batch_size, learning_rate, model = C3DGesture()):
             inputs, labels = inputs.to(device), labels.to(device)
 
             optimizer.zero_grad()
-            outputs = model(inputs)
+            outputs = model(inputs.permute(0, 2, 1, 3, 4))
             loss = criterion(outputs, labels)
 
             scaler.scale(loss).backward()
