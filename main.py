@@ -74,7 +74,7 @@ def preprocess_split(split, input_dir, output_dir, csv_file):
 def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Train or test the model")
-    parser.add_argument('mode', choices=['train', 'test','preprocess'], help="Mode: 'train' or 'test'")
+    parser.add_argument('mode', choices=['train', 'test','preprocess','train_3'], help="Mode: 'train' or 'test'")
     args = parser.parse_args()
 
     # Extract hyperparameters
