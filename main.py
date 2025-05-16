@@ -4,7 +4,7 @@ import argparse
 import configparser
 import logging
 from logging.handlers import RotatingFileHandler
-from src import train
+from src import train, train_3
 import shutil
 
 # Read configuration
@@ -84,6 +84,10 @@ def main():
 
     if args.mode == 'train':
         model = train(num_epochs, batch_size, learning_rate)
+
+    if args.mode == 'train_3':
+        model = train_3(num_epochs, batch_size, learning_rate)
+
     elif args.mode == 'test':
         pass
     elif args.mode == 'preprocess':
