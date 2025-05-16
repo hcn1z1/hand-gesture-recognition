@@ -36,7 +36,7 @@ class JesterDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
-        img_path = self.image_paths[idx]
+        img_path = self.images[idx]
         try:
             image = Image.open(img_path).convert('RGB')
         except UnidentifiedImageError:
