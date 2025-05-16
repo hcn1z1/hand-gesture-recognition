@@ -15,7 +15,7 @@ from functools import partial
 
 def get_labels_from_csv(csv_path):
     """Read labels from Jester CSV."""
-    df = pd.read_csv(csv_path, sep=';')
+    df = pd.read_csv(csv_path)
     # Assuming CSV has columns 'video_id' and 'label' (adjust if different)
     labels = df['label_id'].values
     return labels
