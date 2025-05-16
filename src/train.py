@@ -25,7 +25,7 @@ def train(num_epochs, batch_size, learning_rate, model = MyModel()):
     logger.info(f"Hyperparameters: batch_size={batch_size}, learning_rate={learning_rate}, num_epochs={num_epochs}")
 
     # Load class weights from train.csv
-    train_dataset = JesterDataset('20bnjester-v1-00/', split='train')
+    train_dataset = JesterDataset('data/jester/train/', split='train')
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     df = pd.read_csv('annotations/train.csv')
     sample_counts = df['label_id'].value_counts().sort_index().values
