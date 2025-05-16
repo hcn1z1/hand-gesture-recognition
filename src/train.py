@@ -22,7 +22,7 @@ def train(num_epochs, batch_size, learning_rate):
         transforms.Normalize((0.5,), (0.5,))
     ])
     
-    train_dataset = JesterDataset('data/jester/', split='train', transform=transform)
+    train_dataset = JesterDataset('data/jester/train/', split='train', transform=transform)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     
     df = pd.read_csv('annotations/train.csv')
