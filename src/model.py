@@ -130,3 +130,77 @@ class C3DGestureLSTM(nn.Module):
         x = self.relu(self.fc1(x))       # [B, 256]
         x = self.fc2(x)                  # [B, num_classes]
         return x
+    
+
+
+class MultiScaleLayer(nn.Module):
+    def __init__(self, in_channels, out_channels, stride=1):
+        super().__init__()
+        self.branch1 = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels[0], kernel_size=1, stride=stride, padding=0),
+            nn.BatchNorm2d(out_channels[0]), nn.ReLU()
+        )
+        self.branch2 = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels[1], kernel_size=3, stride=stride, padding=1),
+            nn.BatchNorm2d(out_channels[1]), nn.ReLU()
+        )
+        self.branch3 = nn.Sequential(
+            nn.Conv2d(in_channels, out_channels[2], kernel_size=5, stride=stride, padding=2),
+            nn.BatchNorm2d(out_channels[2]), nn.ReLU()
+        )
+        self.concat = nn.Concatenate(dim=1)
+
+    def forward(self, x):
+        b1 = self.branch1(x)
+        b2 = self.branch2(x)
+        b3 = self.branch3(x)
+        return self.concat([b1, b2, b3])
+
+class ImprovedGestureModel(nn.Module):
+    def __init__(self, num_classes=18):
+        super().__init__()
+        self.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)
+        self.ms1 = MultiScaleLayer(64, [32, 32, 32])
+        self.pool1 = nn.AvgPool2d(2, 2)
+        # Add more layers mimicking MSST structure
+        self.lstm = nn.LSTM(128, 256, batch_first=True)
+        self.fc = nn.Linear(256, num_classes)
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        # x: [B, T, C, H, W]
+        batch_size, seq_len, c, h, w = x.size()
+        x = x.view(batch_size * seq_len, c, h, w)  # [B*T, C, H, W]
+        x = self.relu(self.conv1(x))
+        x = self.ms1(x)
+        x = self.pool1(x)
+        x = x.view(batch_size, seq_len, -1)  # [B, T, C*H*W]
+        x, _ = self.lstm(x)
+        x = x[:, -1, :]
+        x = self.fc(x)
+        return x
+    
+class EarlyStopping:
+    def __init__(self, patience=7, min_delta=0, mode='min'):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.mode = mode
+        self.best_loss = float('inf') if mode == 'min' else -float('inf')
+        self.counter = 0
+        self.early_stop = False
+        self.best_model = None
+
+    def __call__(self, val_loss, model):
+        if self.mode == 'min':
+            current = val_loss
+            if current < self.best_loss - self.min_delta:
+                self.best_loss = current
+                self.counter = 0
+                self.best_model = model.state_dict()
+            else:
+                self.counter += 1
+                if self.counter >= self.patience:
+                    self.early_stop = True
+                    model.load_state_dict(self.best_model)
+        else:
+            raise NotImplementedError("Mode 'max' not implemented yet")
