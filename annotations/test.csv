@@ -1,4 +1,4 @@
-id,label,frames,label_id,shape,format
+video_id,label,frames,label_id,shape,format
 2,,37,,"(100, 176)",JPEG
 21,,37,,"(100, 176)",JPEG
 53,,37,,"(100, 176)",JPEG
