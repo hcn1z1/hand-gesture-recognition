@@ -19,24 +19,22 @@ label2id = {action: idx for idx, action in enumerate(actions)}
 def train(num_epochs, batch_size, lr):
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     transform = transforms.Compose([
+        transforms.Resize((100, 100), interpolation=transforms.InterpolationMode.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
         transforms.RandomHorizontalFlip(p=0.5)
     ])
 
-    # Datasets and loaders
     train_dataset = JesterSequenceDataset('data/jester_processed/', split='train', transform=transform)
     val_dataset = JesterSequenceDataset('data/jester_processed/', split='val', transform=transform)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=32, pin_memory=True)
-    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=32, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
 
-    # Class weights
     class_counts = train_dataset.get_label_counts()
     weights = 1.0 / torch.tensor(class_counts, dtype=torch.float)
     weights = weights / weights.sum() * len(actions)
     weights = weights.to(device)
 
-    # Model, loss, optimizer
     model = C3DGestureLSTM(num_classes=18).to(device)
     criterion = nn.CrossEntropyLoss(weight=weights)
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-4)

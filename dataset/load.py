@@ -64,7 +64,7 @@ class JesterSequenceDataset(Dataset):
         self.data_dir = data_dir
         self.split = split
         self.transform = transform or transforms.Compose([
-            transforms.Resize((100, 100)),
+            transforms.Resize((100, 100), interpolation=transforms.InterpolationMode.BILINEAR),
             transforms.ToTensor(),
             transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
@@ -101,3 +101,4 @@ class JesterSequenceDataset(Dataset):
     def get_label_counts(self):
         labels = [label for _, _, label in self.samples]
         return np.bincount(labels, minlength=len(self.actions))
+
