@@ -8,9 +8,11 @@ class JesterDataset(Dataset):
     def __init__(self, data_dir, split='train', transform=None):
         self.data_dir = data_dir
         self.split = split
-        self.transform = transform or transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize((0.5,), (0.5,))
+        self.transform = transforms.Compose([
+                transforms.Resize((100, 100)),  # Resize to 100x100
+                transforms.ToTensor(),          # Convert to tensor, scales [0,255] to [0,1]
+                transforms.Normalize([0.5, 0.5, 0.5],  # Mean for 3 RGB channels
+                                    [0.5, 0.5, 0.5])  # Std for 3 RGB channels
         ])
         self.images = []
         self.labels = []
