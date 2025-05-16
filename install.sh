@@ -7,7 +7,7 @@ pip install -r requirements.txt
 wget https://apigwx-aws.qualcomm.com/qsc/public/v1/api/download/software/dataset/AIDataset/Jester/20bnjester-v1-00
 wget https://apigwx-aws.qualcomm.com/qsc/public/v1/api/download/software/dataset/AIDataset/Jester/20bnjester-v1-01
 wget https://apigwx-aws.qualcomm.com/qsc/public/v1/api/download/software/dataset/AIDataset/Jester/20bnjester-v1-02
-cat 20bn-jester-v1-?? | tar zx
+cat 20bnjester-v1-?? | tar zx
 mkdir -p data/jester
 mkdir -P data/train
 mkdir -p data/val
