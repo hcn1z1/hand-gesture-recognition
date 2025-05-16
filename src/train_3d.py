@@ -3,7 +3,7 @@ from dataset.load import JesterSequenceDataset
 import torch.nn as nn
 import torch.optim as optim
 import torch
-from .model import C3DGesture
+from .model import C3DGesture,C3DGestureLSTM
 from tqdm import tqdm
 from torchvision import transforms
 from torch.optim.lr_scheduler import StepLR
@@ -67,7 +67,7 @@ def train(num_epochs, batch_size, lr):
     # Initialize model
     print("Initializing model...")
     # Initialize model, loss, optimizer, and scheduler
-    model = C3DGesture(num_classes=27)
+    model = C3DGestureLSTM(num_classes=27)
     try:
         # Attempt to load pretrained weights (modify based on C3DGesture implementation)
         import torchvision.models.video as models
