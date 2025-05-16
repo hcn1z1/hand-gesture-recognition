@@ -2,6 +2,7 @@ import os
 from torch.utils.data import Dataset
 from PIL import Image
 import torchvision.transforms as transforms
+import torch
 
 class JesterDataset(Dataset):
     def __init__(self, data_dir, split='train', transform=None):
@@ -37,4 +38,4 @@ class JesterDataset(Dataset):
         image = Image.open(img_path).convert('RGB')
         if self.transform:
             image = self.transform(image)
-        return image, label
+        return image, torch.tensor(label, dtype=torch.long)

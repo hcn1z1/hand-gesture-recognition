@@ -29,7 +29,7 @@ def train(num_epochs, batch_size, learning_rate):
     sample_counts = df['label_id'].value_counts().sort_index().values
     assert len(sample_counts) == 27, "Expected 27 classes"
     assert df['label_id'].min() == 0 and df['label_id'].max() == 26, "Label IDs out of range"
-    class_weights = torch.tensor([1.0 / count for count in sample_counts]).to(device)
+    class_weights = torch.tensor([1.0 / count for count in sample_counts], dtype=torch.float).to(device)
     
     model = MyModel().to(device)
     criterion = nn.CrossEntropyLoss(weight=class_weights)
@@ -41,8 +41,9 @@ def train(num_epochs, batch_size, learning_rate):
         for inputs, labels in train_loader:
             inputs, labels = inputs.to(device), labels.to(device)
             optimizer.zero_grad()
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            with autocast():
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
             running_loss += loss.item()
