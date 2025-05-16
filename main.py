@@ -64,13 +64,12 @@ def preprocess_split(split, input_dir, output_dir, csv_file):
         # Copy contents (not the folder itself)
         for item in os.listdir(folder_path):
             src_path = os.path.join(folder_path, item)
-
+            new_name = f"{folder_name}_{item}"
+            dst_item = os.path.join(output_video_dir, new_name)
             if os.path.isdir(src_path):
-                shutil.copytree(src_path, output_video_dir, dirs_exist_ok=True)
+                shutil.copytree(src_path, dst_item, dirs_exist_ok=True)
             else:
-                shutil.copy2(src_path, output_video_dir)
-
-        print(f"Copied contents of {video_id} to {output_video_dir}")
+                shutil.copy2(src_path, dst_item)
 
 def main():
     # Parse command-line arguments
