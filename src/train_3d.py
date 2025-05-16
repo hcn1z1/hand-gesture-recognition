@@ -26,6 +26,8 @@ def train(num_epochs, batch_size, lr):
     print(f"Validation dataset size: {len(val_dataset)}")
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=32, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=32, pin_memory=True)
+    print(f"Train loader size: {len(train_loader)}")
+    print(f"Validation loader size: {len(val_loader)}")
 
     # Compute class weights for imbalanced dataset
     labels = [train_dataset[i][1] for i in range(len(train_dataset))]
@@ -33,7 +35,9 @@ def train(num_epochs, batch_size, lr):
     weights = 1.0 / torch.tensor(class_counts, dtype=torch.float)
     weights = weights / weights.sum() * 27  # Normalize weights
     weights = weights.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
-
+    print(f"Class weights: {weights}")
+    # Initialize model
+    print("Initializing model...")
     # Initialize model, loss, optimizer, and scheduler
     model = C3DGesture(num_classes=27)
     try:
@@ -44,14 +48,17 @@ def train(num_epochs, batch_size, lr):
         model.fc = nn.Linear(model.fc.in_features, 27)  # Adapt final layer
     except Exception as e:
         print(f"Warning: Could not load pretrained weights: {e}")
-
+    # Move model to GPU if available
+    print("Moving model to device...")
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model.to(device)
-
+    print(f"Using device: {device}")
     criterion = nn.CrossEntropyLoss(weight=weights)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # Reduce lr by 10x every 10 epochs
-
+    print(f"Optimizer: {optimizer}")
+    print(f"Scheduler: {scheduler}")
+    print(f"Criterion: {criterion}")
     # Training settings
     accum_steps = 2  # Gradient accumulation for effective batch size
     best_val_loss = float('inf')
