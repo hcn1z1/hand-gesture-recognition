@@ -170,10 +170,7 @@ class ImprovedGestureModel(nn.Module):
 
     def forward(self, clip, joint_stream):
         batch_size, c, seq_len, h, w = clip.size()
-        print(f"Input clip shape: {clip.shape}")  # Debug print
-        # Process video frames
         x = clip.contiguous().reshape(batch_size * seq_len, c, h, w)  # [B*T, C, H, W]
-        print(f"After reshape: {x.shape}")
         x = self.relu(self.conv1(x))
         x = self.ms1(x)
         x = self.pool1(x)
