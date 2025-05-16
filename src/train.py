@@ -6,7 +6,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms,datasets
 from dataset.load import JesterDataset
 import logging
-from model import MyModel
+from .model import MyModel
 from dataset import ImageDataset
 from torch.cuda.amp import autocast, GradScaler
 import pandas as pd
