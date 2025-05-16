@@ -3,26 +3,24 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 class MyModel(nn.Module):
-    def __init__(self,num_classes=27):
+    def __init__(self, num_classes=27):
         super(MyModel, self).__init__()
-        # CNN Layers
-        self.conv1 = nn.Conv2d(3, 16, 3, padding=1)   # 100x100x3 → 100x100x16
-        self.pool = nn.MaxPool2d(2, 2)                # Reduces size by half
-        self.conv2 = nn.Conv2d(16, 32, 3, padding=1)  # 50x50x16 → 50x50x32
-        self.conv3 = nn.Conv2d(32, 64, 3, padding=1)  # 25x25x32 → 25x25x64
-        self.conv4 = nn.Conv2d(64, 32, 3, padding=1) # 12x12x64 → 12x12x32
-        # Fully Connected Layers
-        self.fc1 = nn.Linear(12 * 12 * 32, 128)       # 12x12x32 = 4608 → 128
-        self.fc2 = nn.Linear(128, 64)                 # 128 → 64
-        self.fc3 = nn.Linear(64, num_classes)                  # 64 → 27
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)  # 100x100x3 → 100x100x16
+        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)  # 50x50x16 → 50x50x32
+        self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)  # 25x25x32 → 25x25x64
+        self.conv4 = nn.Conv2d(64, 32, kernel_size=3, padding=1)  # 12x12x64 → 12x12x32
+        self.pool = nn.MaxPool2d(2, 2)
+        self.fc1 = nn.Linear(12 * 12 * 32, 128)  # 4608 → 128
+        self.fc2 = nn.Linear(128, num_classes)  # 128 → 27
+        self.relu = nn.ReLU()
+        self.dropout = nn.Dropout(0.5)
 
     def forward(self, x):
-        x = self.pool(nn.functional.relu(self.conv1(x)))  # 100x100x16 → 50x50x16
-        x = self.pool(nn.functional.relu(self.conv2(x)))  # 50x50x32 → 25x25x32
-        x = self.pool(nn.functional.relu(self.conv3(x)))  # 25x25x64 → 12x12x64
-        x = nn.functional.relu(self.conv4(x))             # 12x12x32
-        x = x.view(-1, 12 * 12 * 32)                     # Flatten to 4608
-        x = nn.functional.relu(self.fc1(x))               # First hidden layer
-        x = nn.functional.relu(self.fc2(x))               # Second hidden layer
-        x = self.fc3(x)                                   # Output layer (logits)
+        x = self.pool(self.relu(self.conv1(x)))  # 100x100x16 → 50x50x16
+        x = self.pool(self.relu(self.conv2(x)))  # 50x50x32 → 25x25x32
+        x = self.pool(self.relu(self.conv3(x)))  # 25x25x64 → 12x12x64
+        x = self.pool(self.relu(self.conv4(x)))  # 12x12x32 → 6x6x32
+        x = x.view(x.size(0), -1)  # Flatten to 1152 (6x6x32)
+        x = self.dropout(self.relu(self.fc1(x)))
+        x = self.fc2(x)
         return x
