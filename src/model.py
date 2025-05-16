@@ -162,7 +162,8 @@ class ImprovedGestureModel(nn.Module):
         self.ms1 = MultiScaleLayer(64, [32, 32, 32])
         self.pool1 = nn.AvgPool2d(2, 2)
         self.ms2 = MultiScaleLayer(96, [48, 48, 48], stride=2)
-        self.lstm = nn.LSTM(192, 256, batch_first=True)
+        self.fc_reduce = nn.Linear(15552, 48)  # Reduce CNN output to 48 features
+        self.lstm = nn.LSTM(192, 256, batch_first=True)  # 48 (CNN) + 144 (joint) = 192
         self.dropout = nn.Dropout(0.5)
         self.fc = nn.Linear(256, num_classes)
         self.relu = nn.ReLU()
@@ -177,12 +178,12 @@ class ImprovedGestureModel(nn.Module):
         x = self.ms1(x)
         x = self.pool1(x)
         x = self.ms2(x)
-        # Reshape back for LSTM
-        _, c_new, h_new, w_new = x.size()
-        x = x.view(batch_size, seq_len, c_new * h_new * w_new)  # [B, T, C*H*W]
+        # Reshape and reduce dimensions
+        x = x.view(batch_size, seq_len, -1)  # [B, T, C*H*W]
+        x = self.fc_reduce(x)  # [B, T, 48]
         # Process joint stream
         x_joint = joint_stream.view(batch_size, seq_len, -1)  # [B, T, 144]
-        x = torch.cat([x, x_joint], dim=2)  # [B, T, C*H*W + 144]
+        x = torch.cat([x, x_joint], dim=2)  # [B, T, 192]
         x, _ = self.lstm(x)
         x = self.dropout(x[:, -1, :])
         x = self.fc(x)
