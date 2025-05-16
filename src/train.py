@@ -32,6 +32,7 @@ def train(num_epochs, batch_size, learning_rate, model = MyModel()):
     assert len(sample_counts) == 27, "Expected 27 classes"
     assert df['label_id'].min() == 0 and df['label_id'].max() == 26, "Label IDs out of range"
     class_weights = torch.tensor([1.0 / count for count in sample_counts], dtype=torch.float).to(device)
+    model = model.to(device)
 
     criterion = nn.CrossEntropyLoss(weight=class_weights)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
