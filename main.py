@@ -45,7 +45,7 @@ def preprocess_split(split, input_dir, output_dir, csv_file):
     has_labels = 'label_id' in df.columns and not df['label_id'].isnull().all()
 
     for _, row in df.iterrows():
-        video_id = str(row['video_id'])
+        video_id = str(row['id'])
         frames = row['frames']
         middle_frame = (frames + 1) // 2
         frame_path = os.path.join(input_dir, video_id, f'{middle_frame:05d}.jpg')
