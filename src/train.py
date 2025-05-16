@@ -48,9 +48,8 @@ def train(num_epochs, batch_size, learning_rate, model = MyModel()):
             inputs, labels = inputs.to(device), labels.to(device)
 
             optimizer.zero_grad()
-            with autocast():
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
 
             scaler.scale(loss).backward()
             scaler.step(optimizer)

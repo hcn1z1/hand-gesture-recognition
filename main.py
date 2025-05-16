@@ -54,7 +54,6 @@ def preprocess_split(split, input_dir, output_dir, csv_file):
 
         try:
             img = Image.open(frame_path).convert('RGB')
-            img = img.resize((100, 100), Image.Resampling.LANCZOS)
         except Exception as e:
             print(f"Error processing {frame_path}: {e}")
             continue
