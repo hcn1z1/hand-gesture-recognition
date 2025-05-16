@@ -9,7 +9,7 @@ import shutil
 from multiprocessing import Pool
 from functools import partial
 import pandas as pd
-from src.utils import  preprocess_jester
+from src.utils import  preprocess_jester_multiproc
 from PIL import Image
 
 # Read configuration
@@ -106,7 +106,7 @@ def main():
         input_dir = "20bn-jester-v1"
         output_dir = "data/jester_processed"
         for split, csv in [("train", "annotations/train.csv"), ("val", "annotations/validation.csv")]:
-            preprocess_jester(input_dir, output_dir, csv, split)
+            preprocess_jester_multiproc(input_dir, output_dir, csv, split)
 
 if __name__ == "__main__":
     main()
