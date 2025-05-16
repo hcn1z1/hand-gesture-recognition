@@ -153,7 +153,6 @@ class MultiScaleLayer(nn.Module):
         b1 = self.branch1(x)
         b2 = self.branch2(x)
         b3 = self.branch3(x)
-        self.con
         return torch.cat([b1, b2, b3], dim=1)
 
 class ImprovedGestureModel(nn.Module):
@@ -171,12 +170,14 @@ class ImprovedGestureModel(nn.Module):
     def forward(self, clip, joint_stream):
         batch_size, seq_len, c, h, w = clip.size()
         # Process video frames
-        x = clip.view(batch_size * seq_len, c, h, w)  # [B*T, C, H, W]
+        x = clip.contiguous().reshape(batch_size * seq_len, c, h, w)  # [B*T, C, H, W]
         x = self.relu(self.conv1(x))
         x = self.ms1(x)
         x = self.pool1(x)
         x = self.ms2(x)
-        x = x.view(batch_size, seq_len, -1)  # [B, T, C*H*W]
+        # Reshape back for LSTM
+        _, c_new, h_new, w_new = x.size()
+        x = x.view(batch_size, seq_len, c_new * h_new * w_new)  # [B, T, C*H*W]
         # Process joint stream
         x_joint = joint_stream.view(batch_size, seq_len, -1)  # [B, T, 144]
         x = torch.cat([x, x_joint], dim=2)  # [B, T, C*H*W + 144]
@@ -184,7 +185,6 @@ class ImprovedGestureModel(nn.Module):
         x = self.dropout(x[:, -1, :])
         x = self.fc(x)
         return x
-    
 class EarlyStopping:
     def __init__(self, patience=7, min_delta=0, mode='min'):
         self.patience = patience
