@@ -2,7 +2,6 @@
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from torchvision import transforms
 from dataset.load import JesterDataset
 import logging
 from torch.utils.data import DataLoader
@@ -26,7 +25,7 @@ def train(num_epochs, batch_size, learning_rate, model = CM2()):
 
     # Load class weights from train.csv
     train_dataset = JesterDataset('data/jester/train/', split='train')
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=32, pin_memory=True)
     df = pd.read_csv('annotations/train.csv')
     sample_counts = df['label_id'].value_counts().sort_index().values
     assert len(sample_counts) == 27, "Expected 27 classes"

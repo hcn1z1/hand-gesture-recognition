@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 def train(num_epochs, batch_size, lr):
     dataset = JesterSequenceDataset('data/jester/train', split='train', frames_per_clip=12)
-    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True, num_workers=32)
 
     model = C3DGesture(num_classes=27)  # change to match your dataset
     criterion = nn.CrossEntropyLoss()
