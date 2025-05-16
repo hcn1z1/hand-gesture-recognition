@@ -46,6 +46,7 @@ def train(num_epochs, batch_size, learning_rate, model = C3DGesture()):
         total = 0
         progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=True)
         for i, (inputs, labels) in enumerate(progress_bar):
+            print(f"inputs.shape: {inputs.shape}")
             inputs = inputs.unsqueeze(2) 
             inputs, labels = inputs.to(device), labels.to(device)
 
