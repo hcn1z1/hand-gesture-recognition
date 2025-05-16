@@ -7,3 +7,4 @@ mediapipe
 opencv-python
 opencv-python-headless
 absl-py
+tensorboard

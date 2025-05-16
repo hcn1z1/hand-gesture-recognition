@@ -148,13 +148,13 @@ class MultiScaleLayer(nn.Module):
             nn.Conv2d(in_channels, out_channels[2], kernel_size=5, stride=stride, padding=2),
             nn.BatchNorm2d(out_channels[2]), nn.ReLU()
         )
-        self.concat = nn.Concatenate(dim=1)
 
     def forward(self, x):
         b1 = self.branch1(x)
         b2 = self.branch2(x)
         b3 = self.branch3(x)
-        return self.concat([b1, b2, b3])
+        self.con
+        return torch.cat([b1, b2, b3], dim=1)
 
 class ImprovedGestureModel(nn.Module):
     def __init__(self, num_classes=18):
@@ -162,21 +162,26 @@ class ImprovedGestureModel(nn.Module):
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, padding=1)
         self.ms1 = MultiScaleLayer(64, [32, 32, 32])
         self.pool1 = nn.AvgPool2d(2, 2)
-        # Add more layers mimicking MSST structure
-        self.lstm = nn.LSTM(128, 256, batch_first=True)
+        self.ms2 = MultiScaleLayer(96, [48, 48, 48], stride=2)
+        self.lstm = nn.LSTM(192, 256, batch_first=True)
+        self.dropout = nn.Dropout(0.5)
         self.fc = nn.Linear(256, num_classes)
         self.relu = nn.ReLU()
 
-    def forward(self, x):
-        # x: [B, T, C, H, W]
-        batch_size, seq_len, c, h, w = x.size()
-        x = x.view(batch_size * seq_len, c, h, w)  # [B*T, C, H, W]
+    def forward(self, clip, joint_stream):
+        batch_size, seq_len, c, h, w = clip.size()
+        # Process video frames
+        x = clip.view(batch_size * seq_len, c, h, w)  # [B*T, C, H, W]
         x = self.relu(self.conv1(x))
         x = self.ms1(x)
         x = self.pool1(x)
+        x = self.ms2(x)
         x = x.view(batch_size, seq_len, -1)  # [B, T, C*H*W]
+        # Process joint stream
+        x_joint = joint_stream.view(batch_size, seq_len, -1)  # [B, T, 144]
+        x = torch.cat([x, x_joint], dim=2)  # [B, T, C*H*W + 144]
         x, _ = self.lstm(x)
-        x = x[:, -1, :]
+        x = self.dropout(x[:, -1, :])
         x = self.fc(x)
         return x
     
