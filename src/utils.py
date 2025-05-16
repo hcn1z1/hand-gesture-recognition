@@ -9,7 +9,6 @@ from multiprocessing import Pool, cpu_count
 
 mp_holistic = mp.solutions.holistic
 
-
 actions = [
     "Doing other things", "No gesture", "Rolling Hand Backward", "Rolling Hand Forward",
     "Shaking Hand", "Sliding Two Fingers Down", "Sliding Two Fingers Left",
@@ -66,15 +65,20 @@ def process_video(args):
 
     pose_conn, hand_conn = define_connections()
     frames = []
-    with mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5) as holistic:
+    # Initialize mediapipe Holistic once per process
+    holistic = mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    try:
         for i in range(1, sequence_length + 1):
             frame_path = src_dir / f"{i:05d}.jpg"
             if not frame_path.exists():
                 break
             frame = cv2.imread(str(frame_path))
-            _, results = holistic.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            # Only unpack the results object, no leading underscore
+            results = holistic.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             keypoints = extract_keypoints(results)
             frames.append(keypoints)
+    finally:
+        holistic.close()
 
     if len(frames) < sequence_length:
         return
