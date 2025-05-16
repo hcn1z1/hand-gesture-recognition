@@ -1,12 +1,18 @@
 import os
-import re
-from collections import defaultdict
-from torch.utils.data import Dataset
+import cv2
 import numpy as np
-from PIL import UnidentifiedImageError
-from PIL import Image
-import torchvision.transforms as transforms
-import torch
+import mediapipe as mp
+from pathlib import Path
+from multiprocessing import Pool
+import pandas as pd
+
+# Disable mediapipe and other logs
+import logging
+logging.getLogger().setLevel(logging.ERROR)
+import absl.logging
+absl.logging.set_verbosity(absl.logging.ERROR)
+
+mp_holistic = mp.solutions.holistic
 
 actions = [
     "Doing other things", "No gesture", "Rolling Hand Backward", "Rolling Hand Forward",
@@ -17,87 +23,107 @@ actions = [
 ]
 label2id = {action: idx for idx, action in enumerate(actions)}
 
-class JesterDataset(Dataset):
-    def __init__(self, data_dir, split='train', transform=None):
-        self.data_dir = data_dir
-        self.split = split
-        self.transform = transforms.Compose([
-                transforms.Resize((100, 100)),  # Resize to 100x100
-                transforms.ToTensor(),          # Convert to tensor, scales [0,255] to [0,1]
-                transforms.Normalize([0.5, 0.5, 0.5],  # Mean for 3 RGB channels
-                                    [0.5, 0.5, 0.5])  # Std for 3 RGB channels
-        ])
-        self.images = []
-        self.labels = []
 
-        if split in ['train', 'val']:
-            class_dirs = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))])
-            for label_id, class_dir in enumerate(class_dirs):
-                class_path = os.path.join(data_dir, class_dir)
-                for img_name in os.listdir(class_path):
-                    if img_name.endswith('.jpg'):
-                        self.images.append(os.path.join(class_path, img_name))
-                        self.labels.append(int(class_dir))
-        elif split == 'test':
-            for img_name in os.listdir(data_dir):
-                if img_name.endswith('.jpg'):
-                    self.images.append(os.path.join(data_dir, img_name))
-                    self.labels.append(-1)
+def extract_keypoints(results):
+    keypoints = []
+    pose_indices = [11, 12, 13, 14, 15, 16]
+    if results.pose_landmarks:
+        for idx in pose_indices:
+            lm = results.pose_landmarks.landmark[idx]
+            keypoints.extend([lm.x, lm.y, lm.z])
+    else:
+        keypoints.extend([0.0] * 3 * len(pose_indices))
 
-    def __len__(self):
-        return len(self.images)
+    for hand_landmarks in [results.left_hand_landmarks, results.right_hand_landmarks]:
+        if hand_landmarks:
+            for lm in hand_landmarks.landmark:
+                keypoints.extend([lm.x, lm.y, lm.z])
+        else:
+            keypoints.extend([0.0] * 3 * 21)
+    return np.array(keypoints).reshape(48, 3)
 
-    def __getitem__(self, idx):
-        img_path = self.images[idx]
-        try:
-            image = Image.open(img_path).convert('RGB')
-        except UnidentifiedImageError:
-            print(f"Skipping corrupted image: {img_path}")
-            return self.__getitem__((idx + 1) % len(self.images))  # get next sample
-        label = self.labels[idx]
-        if self.transform:
-            image = self.transform(image)
-        return image, label
-    
-class JesterSequenceDataset(Dataset):
-    def __init__(self, data_dir, split='train', transform=None, frames_per_clip=12, actions=actions):
-        self.data_dir = data_dir
-        self.split = split
-        self.transform = transform or transforms.Compose([
-            transforms.Resize((100, 100)),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
-        ])
-        self.frames_per_clip = frames_per_clip
-        self.actions = actions
-        self.label2id = {action: idx for idx, action in enumerate(actions)}
-        self.samples = []
 
-        split_dir = os.path.join(data_dir, split)
-        for label_str in sorted(os.listdir(split_dir)):
-            if label_str not in map(str, range(len(actions))):
-                continue
-            label = int(label_str)
-            label_dir = os.path.join(split_dir, label_str)
-            for video_id in os.listdir(label_dir):
-                video_dir = os.path.join(label_dir, video_id)
-                if not os.path.isdir(video_dir):
-                    continue
-                frame_paths = sorted([os.path.join(video_dir, f) for f in os.listdir(video_dir) if f.endswith('.jpg')])
-                if len(frame_paths) >= frames_per_clip:
-                    joint_path = os.path.join(label_dir, f"{video_id}_joint.npy")
-                    self.samples.append((frame_paths, joint_path, label))
+def define_connections():
+    pose_connections = [(3, 0), (3, 4), (4, 5), (0, 1), (1, 2)]
+    hand_connections = [
+        (0, 1), (1, 2), (2, 3), (3, 4),
+        (0, 5), (5, 6), (6, 7), (7, 8),
+        (0, 9), (9, 10), (10, 11), (11, 12),
+        (0, 13), (13, 14), (14, 15), (15, 16),
+        (0, 17), (17, 18), (18, 19), (19, 20)
+    ]
+    return pose_connections, hand_connections
 
-    def __len__(self):
-        return len(self.samples)
 
-    def __getitem__(self, idx):
-        frame_paths, joint_path, label = self.samples[idx]
-        frames = [self.transform(Image.open(p).convert('RGB')) for p in frame_paths[:self.frames_per_clip]]
-        clip = torch.stack(frames)  # [T, C, H, W]
-        joint_stream = torch.tensor(np.load(joint_path)[:self.frames_per_clip], dtype=torch.float32)  # [T, 48, 3]
-        return clip, joint_stream, label
+def process_video(args):
+    row, input_dir, output_dir, sequence_length, split = args
+    video_id = str(row['video_id'])
+    label_name = row['label']
+    if label_name not in label2id:
+        return
+    label = label2id[label_name]
+    src_dir = Path(input_dir) / video_id
+    if not src_dir.is_dir():
+        return
 
-    def get_label_counts(self):
-        labels = [label for _, _, label in self.samples]
-        return np.bincount(labels, minlength=len(self.actions))
+    pose_conn, hand_conn = define_connections()
+    frames = []
+    holistic = mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
+    try:
+        for i in range(1, sequence_length + 1):
+            frame_path = src_dir / f"{i:05d}.jpg"
+            if not frame_path.exists():
+                break
+            frame = cv2.imread(str(frame_path))
+            results = holistic.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+            keypoints = extract_keypoints(results)
+            frames.append(keypoints)
+    finally:
+        holistic.close()
+
+    if len(frames) < sequence_length:
+        return
+
+    frames = np.stack(frames)
+    joint_stream = frames
+    bone_pose = np.stack([frames[:, b] - frames[:, a] for a, b in pose_conn], axis=1)
+    bone_left = np.stack([frames[:, b + 6] - frames[:, a + 6] for a, b in hand_conn], axis=1)
+    bone_right = np.stack([frames[:, b + 27] - frames[:, a + 27] for a, b in hand_conn], axis=1)
+    bone_stream = np.concatenate([bone_pose, bone_left, bone_right], axis=1)
+    joint_motion = joint_stream[1:] - joint_stream[:-1]
+    bone_motion = bone_stream[1:] - bone_stream[:-1]
+
+    split_dir = Path(output_dir) / split / str(label)
+    split_dir.mkdir(parents=True, exist_ok=True)
+    np.save(split_dir / f"{video_id}_joint.npy", joint_stream)
+    np.save(split_dir / f"{video_id}_bone.npy", bone_stream)
+    np.save(split_dir / f"{video_id}_joint_motion.npy", joint_motion)
+    np.save(split_dir / f"{video_id}_bone_motion.npy", bone_motion)
+
+    frame_dir = split_dir / video_id
+    frame_dir.mkdir(parents=True, exist_ok=True)
+    for i, frame_path in enumerate(sorted(src_dir.glob("*.jpg"))):
+        img = cv2.imread(str(frame_path))
+        cv2.imwrite(str(frame_dir / f"{i:05d}.jpg"), img)
+
+
+def preprocess_jester_multiproc(input_dir, output_dir, csv_path, split, sequence_length=37):
+    df = pd.read_csv(csv_path)
+    df = df[df['label'].isin(actions)]
+    os.makedirs(output_dir, exist_ok=True)
+
+    tasks = [
+        (row, input_dir, output_dir, sequence_length, split)
+        for _, row in df.iterrows()
+    ]
+
+    with Pool(processes=32) as pool:
+        for _ in pool.imap_unordered(process_video, tasks):
+            pass
+
+
+if __name__ == "__main__":
+    input_dir = "20bn-jester-v1"
+    output_dir = "data/jester_processed"
+    for split, csv in [("train", "annotations/train.csv"), ("val", "annotations/validation.csv")]:
+        preprocess_jester_multiproc(input_dir, output_dir, csv, split)
