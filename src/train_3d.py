@@ -82,7 +82,7 @@ def train(num_epochs, batch_size, lr):
     model.to(device)
     print(f"Using device: {device}")
     criterion = nn.CrossEntropyLoss(weight=weights)
-    optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-4)
+    optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-4, momentum=0.9)
     scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # Reduce lr by 10x every 10 epochs
     print(f"Optimizer: {optimizer}")
     print(f"Scheduler: {scheduler}")
@@ -90,7 +90,7 @@ def train(num_epochs, batch_size, lr):
     # Training settings
     accum_steps = 2  # Gradient accumulation for effective batch size
     best_val_loss = float('inf')
-    patience = 5
+    patience = 20
     patience_counter = 0
     print("Starting training...")
     for epoch in range(num_epochs):
