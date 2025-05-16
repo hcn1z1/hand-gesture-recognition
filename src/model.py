@@ -83,7 +83,7 @@ class C3DGesture(nn.Module):
 
 class C3DGestureLSTM(nn.Module):
     def __init__(self, num_classes=27):
-        super(C3DGesture, self).__init__()
+        super(C3DGestureLSTM, self).__init__()
         self.conv1 = nn.Conv3d(3, 32, kernel_size=(3, 3, 3), padding=1)
         self.pool1 = nn.MaxPool3d(kernel_size=(1, 2, 2))
         self.conv2 = nn.Conv3d(32, 64, kernel_size=(3, 3, 3), padding=1)
