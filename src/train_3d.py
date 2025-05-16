@@ -67,7 +67,7 @@ def train(num_epochs, batch_size, lr):
     # Initialize model
     print("Initializing model...")
     # Initialize model, loss, optimizer, and scheduler
-    model = C3DGestureLSTM(num_classes=27)
+    model = C3DGesture(num_classes=27)
     try:
         # Attempt to load pretrained weights (modify based on C3DGesture implementation)
         import torchvision.models.video as models
@@ -82,7 +82,7 @@ def train(num_epochs, batch_size, lr):
     model.to(device)
     print(f"Using device: {device}")
     criterion = nn.CrossEntropyLoss(weight=weights)
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+    optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = StepLR(optimizer, step_size=10, gamma=0.1)  # Reduce lr by 10x every 10 epochs
     print(f"Optimizer: {optimizer}")
     print(f"Scheduler: {scheduler}")
