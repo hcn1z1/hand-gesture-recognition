@@ -28,7 +28,7 @@ class MyModel(nn.Module):
 
 class CM2(nn.Module):
     def __init__(self):
-        super(MyModel, self).__init__()
+        super(CM2, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),  # Conv2d, not Conv3d
             nn.ReLU(inplace=True),
