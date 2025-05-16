@@ -1,78 +1,82 @@
-# -*- coding: utf-8 -*-
+from torch.utils.data import DataLoader
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader
-from dataset.load import JesterDataset
-import logging
-from torch.utils.data import DataLoader
-from .model import MyModel, CM2
-from torch.cuda.amp import autocast, GradScaler
-import pandas as pd
-from tqdm import tqdm
-import os
 import torch.optim as optim
+from tqdm import tqdm
+import torchvision.transforms as transforms
+from dataset.load import JesterSequenceDataset
+from model import C3DGestureLSTM
 
-use_cuda = "cuda"
-device = torch.device("cuda" if use_cuda and torch.cuda.is_available() else "cpu")
+actions = [
+    "Doing other things", "No gesture", "Rolling Hand Backward", "Rolling Hand Forward",
+    "Shaking Hand", "Sliding Two Fingers Down", "Sliding Two Fingers Left",
+    "Sliding Two Fingers Right", "Sliding Two Fingers Up", "Stop Sign",
+    "Swiping Down", "Swiping Left", "Swiping Right", "Swiping Up",
+    "Thumb Down", "Thumb Up", "Turning Hand Clockwise", "Turning Hand Counterclockwise"
+]
+label2id = {action: idx for idx, action in enumerate(actions)}
 
+def train(num_epochs, batch_size, lr):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    transform = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+        transforms.RandomHorizontalFlip(p=0.5)
+    ])
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-def train(num_epochs, batch_size, learning_rate, model = CM2()):
-    logger.info(f"Starting training on {device}")
-    logger.info(f"Hyperparameters: batch_size={batch_size}, learning_rate={learning_rate}, num_epochs={num_epochs}")
-
-    # Load class weights from train.csv
-    train_dataset = JesterDataset('data/jester/train/', split='train')
+    # Datasets and loaders
+    train_dataset = JesterSequenceDataset('data/jester_processed/train', split='train', transform=transform)
+    val_dataset = JesterSequenceDataset('data/jester_processed/val', split='val', transform=transform)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=32, pin_memory=True)
-    df = pd.read_csv('annotations/train.csv')
-    sample_counts = df['label_id'].value_counts().sort_index().values
-    assert len(sample_counts) == 27, "Expected 27 classes"
-    assert df['label_id'].min() == 0 and df['label_id'].max() == 26, "Label IDs out of range"
-    class_weights = torch.tensor([1.0 / count for count in sample_counts], dtype=torch.float).to(device)
-    model = model.to(device)
+    val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=32, pin_memory=True)
 
-    criterion = nn.CrossEntropyLoss(weight=class_weights)
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    scaler = GradScaler()
-    scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+    # Class weights
+    class_counts = train_dataset.get_label_counts()
+    weights = 1.0 / torch.tensor(class_counts, dtype=torch.float)
+    weights = weights / weights.sum() * len(actions)
+    weights = weights.to(device)
 
+    # Model, loss, optimizer
+    model = C3DGestureLSTM(num_classes=18).to(device)
+    criterion = nn.CrossEntropyLoss(weight=weights)
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=0.9, weight_decay=1e-4)
+
+    best_val_loss = float('inf')
     for epoch in range(num_epochs):
         model.train()
-        running_loss = 0.0
-        correct = 0
-        total = 0
-        progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=True)
-        for i, (inputs, labels) in enumerate(progress_bar):
-            print(f"inputs.shape: {inputs.shape}")
-            inputs, labels = inputs.to(device), labels.to(device)
-
+        running_loss, correct = 0.0, 0
+        for clips, joints, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
+            clips, joints, labels = clips.to(device), joints.to(device), labels.to(device)
+            clips = clips.permute(0, 2, 1, 3, 4)  # [B, C, T, H, W]
             optimizer.zero_grad()
-            outputs = model(inputs)
+            outputs = model(clips, joints)
             loss = criterion(outputs, labels)
-
-            scaler.scale(loss).backward()
-            scaler.step(optimizer)
-            scaler.update()
-
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
+            optimizer.step()
             running_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += labels.size(0)
-            correct += predicted.eq(labels).sum().item()
-            accuracy = 100. * correct / total
-            progress_bar.set_postfix({'loss': f'{loss.item():.4f}', 'acc': f'{accuracy:.2f}%'})
-            progress_bar.update(1)
+            correct += (outputs.argmax(1) == labels).sum().item()
 
-        epoch_loss = running_loss / len(train_loader)
-        epoch_acc = 100. * correct / total
-        logger.info(f"Epoch {epoch+1}, Average Loss: {epoch_loss:.4f}, Accuracy: {epoch_acc:.2f}%")
-        scheduler.step(epoch_loss)
-        progress_bar.close()
+        train_loss = running_loss / len(train_loader)
+        train_acc = 100. * correct / len(train_dataset)
 
-    os.makedirs('checkpoints', exist_ok=True)
-    model_path = f"checkpoints/simple_cnn_epoch_{num_epochs}.pth"
-    torch.save(model.state_dict(), model_path)
-    logger.info(f"Model saved to {model_path}")
+        model.eval()
+        val_loss, val_correct = 0.0, 0
+        with torch.no_grad():
+            for clips, joints, labels in val_loader:
+                clips, joints, labels = clips.to(device), joints.to(device), labels.to(device)
+                clips = clips.permute(0, 2, 1, 3, 4)
+                outputs = model(clips, joints)
+                val_loss += criterion(outputs, labels).item()
+                val_correct += (outputs.argmax(1) == labels).sum().item()
 
+        val_loss /= len(val_loader)
+        val_acc = 100. * val_correct / len(val_dataset)
+        print(f"Epoch {epoch+1}: Train Loss: {train_loss:.3f}, Acc: {train_acc:.2f}%, Val Loss: {val_loss:.3f}, Acc: {val_acc:.2f}%")
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            torch.save(model.state_dict(), 'best_model.pth')
+
+    model.load_state_dict(torch.load('best_model.pth'))
     return model

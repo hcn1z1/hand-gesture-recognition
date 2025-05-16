@@ -3,3 +3,6 @@ numpy
 configparser
 pandas
 tqdm
+mediapipe
+opencv-python
+opencv-python-headless

@@ -9,6 +9,7 @@ import shutil
 from multiprocessing import Pool
 from functools import partial
 import pandas as pd
+from src.utils import  preprocess_jester
 from PIL import Image
 
 # Read configuration
@@ -102,16 +103,10 @@ def main():
     elif args.mode == 'test':
         pass
     elif args.mode == 'preprocess':
-        input_dir = '20bn-jester-v1'
-        output_dir = 'data/jester'
-        splits = ['train', 'validation', 'test']
-
-        for split in splits:
-            csv_file = f'annotations/{split}.csv'
-            if not os.path.exists(csv_file):
-                print(f"CSV file {csv_file} not found")
-                continue
-            preprocess_split(split, input_dir, output_dir, csv_file)
+        input_dir = "20bn-jester-v1"
+        output_dir = "data/jester_processed"
+        for split, csv in [("train", "annotations/train.csv"), ("val", "annotations/validation.csv")]:
+            preprocess_jester(input_dir, output_dir, csv, split)
 
 if __name__ == "__main__":
     main()

@@ -2,10 +2,20 @@ import os
 import re
 from collections import defaultdict
 from torch.utils.data import Dataset
+import numpy as np
 from PIL import UnidentifiedImageError
 from PIL import Image
 import torchvision.transforms as transforms
 import torch
+
+actions = [
+    "Doing other things", "No gesture", "Rolling Hand Backward", "Rolling Hand Forward",
+    "Shaking Hand", "Sliding Two Fingers Down", "Sliding Two Fingers Left",
+    "Sliding Two Fingers Right", "Sliding Two Fingers Up", "Stop Sign",
+    "Swiping Down", "Swiping Left", "Swiping Right", "Swiping Up",
+    "Thumb Down", "Thumb Up", "Turning Hand Clockwise", "Turning Hand Counterclockwise"
+]
+label2id = {action: idx for idx, action in enumerate(actions)}
 
 class JesterDataset(Dataset):
     def __init__(self, data_dir, split='train', transform=None):
@@ -50,66 +60,44 @@ class JesterDataset(Dataset):
         return image, label
     
 class JesterSequenceDataset(Dataset):
-    def __init__(self, data_dir, split='train', transform=None, frames_per_clip=16, frame_stride=1):
+    def __init__(self, data_dir, split='train', transform=None, frames_per_clip=12, actions=actions):
         self.data_dir = data_dir
         self.split = split
         self.transform = transform or transforms.Compose([
             transforms.Resize((100, 100)),
             transforms.ToTensor(),
-            transforms.Normalize([0.5, 0.5, 0.5],
-                                 [0.5, 0.5, 0.5])
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
         ])
         self.frames_per_clip = frames_per_clip
-        self.frame_stride = frame_stride
+        self.actions = actions
+        self.label2id = {action: idx for idx, action in enumerate(actions)}
         self.samples = []
 
-        # Scan class folders
-        for label_str in sorted(os.listdir(data_dir)):
-            label_path = os.path.join(data_dir, label_str)
-            if not os.path.isdir(label_path):
+        split_dir = os.path.join(data_dir, split)
+        for label_str in sorted(os.listdir(split_dir)):
+            if label_str not in map(str, range(len(actions))):
                 continue
             label = int(label_str)
-
-            # Group images by video_id
-            video_groups = defaultdict(list)
-            for img_name in sorted(os.listdir(label_path)):
-                if not img_name.endswith('.jpg'):
+            label_dir = os.path.join(split_dir, label_str)
+            for video_id in os.listdir(label_dir):
+                video_dir = os.path.join(label_dir, video_id)
+                if not os.path.isdir(video_dir):
                     continue
-
-                # Extract video_id using regex
-                match = re.match(r"([a-zA-Z0-9]+)_\d+\.jpe?g", img_name)
-                if not match:
-                    continue
-                video_id = match.group(1)
-                full_path = os.path.join(label_path, img_name)
-                video_groups[video_id].append(full_path)
-
-            # Build dataset entries
-            for video_id, frame_paths in video_groups.items():
-                frame_paths = sorted(frame_paths)
-                if len(frame_paths) >= frames_per_clip * frame_stride:
-                    self.samples.append((frame_paths, label))
+                frame_paths = sorted([os.path.join(video_dir, f) for f in os.listdir(video_dir) if f.endswith('.jpg')])
+                if len(frame_paths) >= frames_per_clip:
+                    joint_path = os.path.join(label_dir, f"{video_id}_joint.npy")
+                    self.samples.append((frame_paths, joint_path, label))
 
     def __len__(self):
         return len(self.samples)
 
     def __getitem__(self, idx):
-        frame_paths, label = self.samples[idx]
+        frame_paths, joint_path, label = self.samples[idx]
+        frames = [self.transform(Image.open(p).convert('RGB')) for p in frame_paths[:self.frames_per_clip]]
+        clip = torch.stack(frames)  # [T, C, H, W]
+        joint_stream = torch.tensor(np.load(joint_path)[:self.frames_per_clip], dtype=torch.float32)  # [T, 48, 3]
+        return clip, joint_stream, label
 
-        # Uniformly sample frames
-        selected_frames = frame_paths[::self.frame_stride][:self.frames_per_clip]
-        if len(selected_frames) < self.frames_per_clip:
-            selected_frames += [selected_frames[-1]] * (self.frames_per_clip - len(selected_frames))  # pad
-
-        frames = []
-        for frame_path in selected_frames:
-            try:
-                img = Image.open(frame_path).convert('RGB')
-                img = self.transform(img)
-                frames.append(img)
-            except UnidentifiedImageError:
-                print(f"Skipping corrupted frame: {frame_path}")
-                return self.__getitem__((idx + 1) % len(self.samples))
-
-        clip = torch.stack(frames, dim=0)  # [T, C, H, W]
-        return clip, label
+    def get_label_counts(self):
+        labels = [label for _, _, label in self.samples]
+        return np.bincount(labels, minlength=len(self.actions))
