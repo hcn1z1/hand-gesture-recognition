@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 class MyModel(nn.Module):
-    def __init__(self):
+    def __init__(self,num_classes=27):
         super(MyModel, self).__init__()
         # CNN Layers
         self.conv1 = nn.Conv2d(3, 16, 3, padding=1)   # 100x100x3 → 100x100x16
@@ -14,7 +14,7 @@ class MyModel(nn.Module):
         # Fully Connected Layers
         self.fc1 = nn.Linear(12 * 12 * 32, 128)       # 12x12x32 = 4608 → 128
         self.fc2 = nn.Linear(128, 64)                 # 128 → 64
-        self.fc3 = nn.Linear(64, 27)                  # 64 → 27
+        self.fc3 = nn.Linear(64, num_classes)                  # 64 → 27
 
     def forward(self, x):
         x = self.pool(nn.functional.relu(self.conv1(x)))  # 100x100x16 → 50x50x16

@@ -1,36 +1,40 @@
 import os
-import random
+from torch.utils.data import Dataset
+from PIL import Image
+import torchvision.transforms as transforms
 
-
-class ImageDataset:
-    def __init__(self, root_dir, transform=None):
-        self.root_dir = root_dir
-        self.transform = transform
-        self.image_paths = []
+class JesterDataset(Dataset):
+    def __init__(self, data_dir, split='train', transform=None):
+        self.data_dir = data_dir
+        self.split = split
+        self.transform = transform or transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize((0.5,), (0.5,))
+        ])
+        self.images = []
         self.labels = []
-        self._load_data()
 
-    def _load_data(self):
-        for label in os.listdir(self.root_dir):
-            label_dir = os.path.join(self.root_dir, label)
-            if os.path.isdir(label_dir):
-                for img_file in os.listdir(label_dir):
-                    img_path = os.path.join(label_dir, img_file)
-                    if img_file.endswith('.jpg') or img_file.endswith('.png'):
-                        self.image_paths.append(img_path)
-                        self.labels.append(int(label))  # Assuming labels are integers
+        if split in ['train', 'val']:
+            class_dirs = sorted([d for d in os.listdir(data_dir) if os.path.isdir(os.path.join(data_dir, d))])
+            for label_id, class_dir in enumerate(class_dirs):
+                class_path = os.path.join(data_dir, class_dir)
+                for img_name in os.listdir(class_path):
+                    if img_name.endswith('.jpg'):
+                        self.images.append(os.path.join(class_path, img_name))
+                        self.labels.append(int(class_dir))
+        elif split == 'test':
+            for img_name in os.listdir(data_dir):
+                if img_name.endswith('.jpg'):
+                    self.images.append(os.path.join(data_dir, img_name))
+                    self.labels.append(-1)
 
     def __len__(self):
-        return len(self.image_paths)
+        return len(self.images)
 
     def __getitem__(self, idx):
-        img_path = self.image_paths[idx]
+        img_path = self.images[idx]
         label = self.labels[idx]
-        image = self._load_image(img_path)
+        image = Image.open(img_path).convert('RGB')
         if self.transform:
             image = self.transform(image)
         return image, label
-
-    def _load_image(self, path):
-        from PIL import Image
-        return Image.open(path).convert('RGB')
