@@ -48,7 +48,9 @@ def preprocess_split(split, input_dir, output_dir, csv_file):
         video_id = str(row['video_id'])
         frames = row['frames']
         middle_frame = (frames + 1) // 2
-        frame_path = os.path.join(input_dir, video_id, f'{middle_frame:05d}.jpg')
+        video_dir = os.path.join(input_dir, video_id)
+        os.makedirs(video_dir, exist_ok=True)
+        frame_path = os.path.join(video_dir, f'{middle_frame:05d}.jpg')
 
         try:
             img = Image.open(frame_path).convert('RGB')
