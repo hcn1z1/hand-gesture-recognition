@@ -41,22 +41,40 @@ import os
 import pandas as pd
 from PIL import Image
 
-def preprocess_split(split, input_dir, output_dir, csv_file):
+def preprocess_split(input_dir, output_dir, csv_file):
     df = pd.read_csv(csv_file)
-    has_labels = 'label_id' in df.columns and not df['label_id'].isnull().all()
+    
+    # Get the list of valid video_ids from CSV
+    valid_video_ids = set(df['video_id'].astype(str))
 
-    for _, row in df.iterrows():
-        video_id = str(row['video_id'])
-        frames = row['frames']
-        middle_frame = (frames + 1) // 2
-        video_dir = os.path.join(input_dir, video_id)
-        if not os.path.exists(video_dir):
-            print(f"Video directory {video_dir} not found")
-            continue
-        shutil.copytree(video_dir, os.path.join(output_dir, video_id), dirs_exist_ok=True)
+    # Iterate over folders in the input directory
+    for folder_name in os.listdir(input_dir):
+        folder_path = os.path.join(input_dir, folder_name)
         
+        if not os.path.isdir(folder_path):
+            continue  # Skip files
 
+        video_id = str(folder_name)
 
+        if video_id not in valid_video_ids:
+            print(f"Skipping {video_id}, not in CSV")
+            continue
+
+        output_video_dir = os.path.join(output_dir, video_id)
+        os.makedirs(output_video_dir, exist_ok=True)
+
+        # Copy contents (not the folder itself)
+        for item in os.listdir(folder_path):
+            src_path = os.path.join(folder_path, item)
+            dst_path = os.path.join(output_video_dir, item)
+
+            if os.path.isdir(src_path):
+                shutil.copytree(src_path, dst_path, dirs_exist_ok=True)
+            else:
+                shutil.copy2(src_path, dst_path)
+
+        print(f"Copied contents of {video_id} to {output_video_dir}")
+        
 def main():
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="Train or test the model")
