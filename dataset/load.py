@@ -41,8 +41,9 @@ class JesterDataset(Dataset):
             image = Image.open(img_path).convert('RGB')
         except UnidentifiedImageError:
             print(f"Skipping corrupted image: {img_path}")
-            return self.__getitem__((idx + 1) % len(self.image_paths))  # get next sample
+            return self.__getitem__((idx + 1) % len(self.images))  # get next sample
         label = self.labels[idx]
         if self.transform:
             image = self.transform(image)
         return image, label
+    
