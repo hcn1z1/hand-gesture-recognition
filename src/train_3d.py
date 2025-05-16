@@ -25,8 +25,8 @@ def train(num_epochs, batch_size, lr):
         transforms.RandomHorizontalFlip(p=0.5)
     ])
 
-    train_dataset = JesterSequenceDataset('data/jester_processed/train', split='train', transform=transform)
-    val_dataset = JesterSequenceDataset('data/jester_processed/val', split='val', transform=transform)
+    train_dataset = JesterSequenceDataset('data/jester_processed/', split='train', transform=transform)
+    val_dataset = JesterSequenceDataset('data/jester_processed/', split='val', transform=transform)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
 
