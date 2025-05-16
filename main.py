@@ -86,7 +86,7 @@ def main():
     elif args.mode == 'test':
         pass
     elif args.mode == 'preprocess':
-        input_dir = 'data'
+        input_dir = '20bn-jester-v1'
         output_dir = 'data/jester'
         splits = ['train', 'validation', 'test']
 
