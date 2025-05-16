@@ -80,6 +80,7 @@ def train(num_epochs, batch_size, lr):
                 correct += predicted.eq(labels).sum().item()
 
                 pbar.set_postfix({'loss': f'{loss.item() * accum_steps:.3f}'})
+                pbar.update(1)
 
         train_acc = 100. * correct / len(train_dataset)
         train_loss = running_loss / len(train_loader)
@@ -117,7 +118,7 @@ def train(num_epochs, batch_size, lr):
             break
 
         scheduler.step()
-
+        pbar.close()
     # Load best model
     model.load_state_dict(torch.load('best_model.pth'))
     return model    
