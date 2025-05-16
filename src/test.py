@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
-from model import MyModel
+from .model import MyModel
 import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -23,9 +23,8 @@ def test(model, device, test_loader, criterion, batch_size):
     criterion = nn.CrossEntropyLoss()
 
     # Train the model
-
-    # Test the model
-    test(model, device, test_loader, criterion)
+    model = MyModel().to(device)
+    model.load_state_dict(torch.load('checkpoints/simple_cnn_epoch_10.pth'))
     model.eval()
     test_loss = 0
     correct = 0
