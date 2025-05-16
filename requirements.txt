@@ -2,3 +2,4 @@ torchvision
 numpy
 configparser
 pandas
+tqdm
