@@ -5,6 +5,7 @@ from torch.utils.data import DataLoader
 from torchvision import transforms
 from dataset.load import JesterDataset
 import logging
+from torch.utils.data import DataLoader
 from .model import MyModel
 from torch.cuda.amp import autocast, GradScaler
 import pandas as pd
@@ -19,11 +20,13 @@ device = torch.device("cuda" if use_cuda and torch.cuda.is_available() else "cpu
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def train(num_epochs, batch_size, learning_rate, model, device, train_loader):
+def train(num_epochs, batch_size, learning_rate, model = MyModel()):
     logger.info(f"Starting training on {device}")
     logger.info(f"Hyperparameters: batch_size={batch_size}, learning_rate={learning_rate}, num_epochs={num_epochs}")
 
     # Load class weights from train.csv
+    train_dataset = JesterDataset('20bnjester-v1-00/', split='train')
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
     df = pd.read_csv('annotations/train.csv')
     sample_counts = df['label_id'].value_counts().sort_index().values
     assert len(sample_counts) == 27, "Expected 27 classes"
