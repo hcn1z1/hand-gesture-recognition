@@ -6,7 +6,7 @@ from torchvision import transforms
 from dataset.load import JesterDataset
 import logging
 from torch.utils.data import DataLoader
-from .model import MyModel, C3DGesture
+from .model import MyModel, CM2
 from torch.cuda.amp import autocast, GradScaler
 import pandas as pd
 from tqdm import tqdm
@@ -20,7 +20,7 @@ device = torch.device("cuda" if use_cuda and torch.cuda.is_available() else "cpu
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def train(num_epochs, batch_size, learning_rate, model = C3DGesture()):
+def train(num_epochs, batch_size, learning_rate, model = CM2()):
     logger.info(f"Starting training on {device}")
     logger.info(f"Hyperparameters: batch_size={batch_size}, learning_rate={learning_rate}, num_epochs={num_epochs}")
 
@@ -47,11 +47,10 @@ def train(num_epochs, batch_size, learning_rate, model = C3DGesture()):
         progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}', leave=True)
         for i, (inputs, labels) in enumerate(progress_bar):
             print(f"inputs.shape: {inputs.shape}")
-            inputs = inputs.unsqueeze(2) 
             inputs, labels = inputs.to(device), labels.to(device)
 
             optimizer.zero_grad()
-            outputs = model(inputs.permute(0, 2, 1, 3, 4))
+            outputs = model(inputs)
             loss = criterion(outputs, labels)
 
             scaler.scale(loss).backward()

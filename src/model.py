@@ -26,33 +26,25 @@ class MyModel(nn.Module):
         return x
     
 
-class C3DGesture(nn.Module):
-    """
-    A simple 3D CNN to capture spatio-temporal patterns over short video clips.
-    Input shape: (batch_size, 3, T, H, W)
-    """
-    def __init__(self, num_classes=27):
-        super(C3DGesture, self).__init__()
+class CM2(nn.Module):
+    def __init__(self):
+        super(MyModel, self).__init__()
         self.features = nn.Sequential(
-            nn.Conv3d(3, 64, kernel_size=(3, 7, 7), stride=(1, 2, 2), padding=(1, 3, 3), bias=False),
-            nn.BatchNorm3d(64),
+            nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),  # Conv2d, not Conv3d
             nn.ReLU(inplace=True),
-            nn.MaxPool3d(kernel_size=(1, 3, 3), stride=(1, 2, 2), padding=(0, 1, 1)),
-
-            nn.Conv3d(64, 128, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm3d(128),
+            nn.MaxPool2d(kernel_size=2),
+            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool3d(2),  # reduces T, H, W by half
-
-            nn.Conv3d(128, 256, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm3d(256),
-            nn.ReLU(inplace=True),
-            nn.AdaptiveAvgPool3d((1, 1, 1))
+            nn.MaxPool2d(kernel_size=2)
         )
-        self.classifier = nn.Linear(256, num_classes)
+        self.classifier = nn.Sequential(
+            nn.Linear(128 * 25 * 25, 256),
+            nn.ReLU(inplace=True),
+            nn.Linear(256, 27)
+        )
 
     def forward(self, x):
-        # x: (B, 3, T, H, W)
-        x = self.features(x)          # -> (B, 256, 1, 1, 1)
-        x = x.view(x.size(0), -1)     # -> (B, 256)
-        return self.classifier(x)     # -> (B, num_classes)
+        x = self.features(x)
+        x = torch.flatten(x, 1)
+        x = self.classifier(x)
+        return x
