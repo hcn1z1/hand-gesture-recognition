@@ -19,9 +19,11 @@ def train(num_epochs, batch_size, lr):
     ])
 
     # Load datasets
+    print("Loading datasets...")
     train_dataset = JesterSequenceDataset('data/jester/train', split='train', frames_per_clip=12, transform=transform)
     val_dataset = JesterSequenceDataset('data/jester/validation', split='val', frames_per_clip=12, transform=transform)
-    
+    print(f"Train dataset size: {len(train_dataset)}")
+    print(f"Validation dataset size: {len(val_dataset)}")
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=32, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=32, pin_memory=True)
 
