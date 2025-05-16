@@ -3,9 +3,14 @@ import cv2
 import numpy as np
 import mediapipe as mp
 from pathlib import Path
-from tqdm import tqdm
+from multiprocessing import Pool
 import pandas as pd
-from multiprocessing import Pool, cpu_count
+
+# Disable mediapipe and other logs
+import logging
+logging.getLogger().setLevel(logging.ERROR)
+import absl.logging
+absl.logging.set_verbosity(absl.logging.ERROR)
 
 mp_holistic = mp.solutions.holistic
 
@@ -21,7 +26,6 @@ label2id = {action: idx for idx, action in enumerate(actions)}
 
 def extract_keypoints(results):
     keypoints = []
-    # Pose landmarks (indices: 11, 12, 13, 14, 15, 16)
     pose_indices = [11, 12, 13, 14, 15, 16]
     if results.pose_landmarks:
         for idx in pose_indices:
@@ -30,7 +34,6 @@ def extract_keypoints(results):
     else:
         keypoints.extend([0.0] * 3 * len(pose_indices))
 
-    # Hand landmarks (21 per hand)
     for hand_landmarks in [results.left_hand_landmarks, results.right_hand_landmarks]:
         if hand_landmarks:
             for lm in hand_landmarks.landmark:
@@ -65,7 +68,6 @@ def process_video(args):
 
     pose_conn, hand_conn = define_connections()
     frames = []
-    # Initialize mediapipe Holistic once per process
     holistic = mp_holistic.Holistic(min_detection_confidence=0.5, min_tracking_confidence=0.5)
     try:
         for i in range(1, sequence_length + 1):
@@ -73,7 +75,6 @@ def process_video(args):
             if not frame_path.exists():
                 break
             frame = cv2.imread(str(frame_path))
-            # Only unpack the results object, no leading underscore
             results = holistic.process(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             keypoints = extract_keypoints(results)
             frames.append(keypoints)
@@ -116,8 +117,9 @@ def preprocess_jester_multiproc(input_dir, output_dir, csv_path, split, sequence
         for _, row in df.iterrows()
     ]
 
-    with Pool(processes=cpu_count()) as pool:
-        list(tqdm(pool.imap_unordered(process_video, tasks), total=len(tasks), desc=f"Processing {split}"))
+    with Pool(processes=32) as pool:
+        for _ in pool.imap_unordered(process_video, tasks):
+            pass
 
 
 if __name__ == "__main__":
