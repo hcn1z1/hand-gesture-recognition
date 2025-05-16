@@ -5,8 +5,9 @@ source venv/bin/activate
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128
 pip install -r requirements.txt
 wget https://apigwx-aws.qualcomm.com/qsc/public/v1/api/download/software/dataset/AIDataset/Jester/20bnjester-v1-00
-tar -xvf 20bnjester-v1-000.tar.gz 
-rm 20bnjester-v1-000.tar.gz
+wget https://apigwx-aws.qualcomm.com/qsc/public/v1/api/download/software/dataset/AIDataset/Jester/20bnjester-v1-01
+wget https://apigwx-aws.qualcomm.com/qsc/public/v1/api/download/software/dataset/AIDataset/Jester/20bnjester-v1-02
+cat 20bn-jester-v1-?? | tar zx
 mkdir -p data/jester
 mkdir -P data/train
 mkdir -p data/val
