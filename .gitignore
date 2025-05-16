@@ -1,0 +1,6 @@
+data/
+__pycache__/
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
