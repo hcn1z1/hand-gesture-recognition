@@ -15,7 +15,7 @@ def train(num_epochs, batch_size, lr):
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         transforms.RandomHorizontalFlip(p=0.5),
-        transforms.RandomCrop((112, 112), padding=4)
+        transforms.RandomCrop((100, 100), padding=4)
     ])
 
     # Load datasets
@@ -120,4 +120,4 @@ def train(num_epochs, batch_size, lr):
 
     # Load best model
     model.load_state_dict(torch.load('best_model.pth'))
-    return model
+    return model    
