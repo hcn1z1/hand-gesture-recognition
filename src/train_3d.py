@@ -17,7 +17,7 @@ def get_labels_from_csv(csv_path):
     """Read labels from Jester CSV."""
     df = pd.read_csv(csv_path, sep=';')
     # Assuming CSV has columns 'video_id' and 'label' (adjust if different)
-    labels = df['label'].values
+    labels = df['label_id'].values
     return labels
 
 def get_labels_parallel(dataset, num_processes=32):
