@@ -6,7 +6,7 @@ from torchvision import transforms
 from dataset.load import JesterDataset
 import logging
 from torch.utils.data import DataLoader
-from .model import MyModel
+from .model import MyModel, C3DGesture
 from torch.cuda.amp import autocast, GradScaler
 import pandas as pd
 from tqdm import tqdm
@@ -20,7 +20,7 @@ device = torch.device("cuda" if use_cuda and torch.cuda.is_available() else "cpu
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def train(num_epochs, batch_size, learning_rate, model = MyModel()):
+def train(num_epochs, batch_size, learning_rate, model = C3DGesture()):
     logger.info(f"Starting training on {device}")
     logger.info(f"Hyperparameters: batch_size={batch_size}, learning_rate={learning_rate}, num_epochs={num_epochs}")
 

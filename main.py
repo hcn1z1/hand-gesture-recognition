@@ -5,6 +5,7 @@ import configparser
 import logging
 from logging.handlers import RotatingFileHandler
 from src import train
+import shutil
 
 # Read configuration
 config = configparser.ConfigParser()
@@ -49,24 +50,11 @@ def preprocess_split(split, input_dir, output_dir, csv_file):
         frames = row['frames']
         middle_frame = (frames + 1) // 2
         video_dir = os.path.join(input_dir, video_id)
-        os.makedirs(video_dir, exist_ok=True)
-        frame_path = os.path.join(video_dir, f'{middle_frame:05d}.jpg')
-
-        try:
-            img = Image.open(frame_path).convert('RGB')
-        except Exception as e:
-            print(f"Error processing {frame_path}: {e}")
+        if not os.path.exists(video_dir):
+            print(f"Video directory {video_dir} not found")
             continue
-
-        if has_labels:
-            label_id = row['label_id']
-            save_dir = os.path.join(output_dir, split, str(label_id))
-        else:
-            save_dir = os.path.join(output_dir, split)
-
-        os.makedirs(save_dir, exist_ok=True)
-        save_path = os.path.join(save_dir, f'{video_id}.jpg')
-        img.save(save_path)
+        shutil.copytree(video_dir, os.path.join(output_dir, video_id), dirs_exist_ok=True)
+        
 
 
 def main():
