@@ -1,5 +1,6 @@
 import os
 from torch.utils.data import Dataset
+from PIL import UnidentifiedImageError
 from PIL import Image
 import torchvision.transforms as transforms
 import torch
@@ -35,9 +36,13 @@ class JesterDataset(Dataset):
         return len(self.images)
 
     def __getitem__(self, idx):
-        img_path = self.images[idx]
+        img_path = self.image_paths[idx]
+        try:
+            image = Image.open(img_path).convert('RGB')
+        except UnidentifiedImageError:
+            print(f"Skipping corrupted image: {img_path}")
+            return self.__getitem__((idx + 1) % len(self.image_paths))  # get next sample
         label = self.labels[idx]
-        image = Image.open(img_path).convert('RGB')
         if self.transform:
             image = self.transform(image)
-        return image, torch.tensor(label, dtype=torch.long)
+        return image, label

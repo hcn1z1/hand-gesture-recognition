@@ -63,9 +63,7 @@ def train(num_epochs, batch_size, learning_rate, model = CM2()):
             correct += predicted.eq(labels).sum().item()
             accuracy = 100. * correct / total
             progress_bar.set_postfix({'loss': f'{loss.item():.4f}', 'acc': f'{accuracy:.2f}%'})
-
-            if (i + 1) % 100 == 0:
-                logger.info(f'Epoch [{epoch+1}/{num_epochs}], Step [{i+1}/{len(train_loader)}], Loss: {loss.item():.4f}, Accuracy: {accuracy:.2f}%')
+            progress_bar.update(1)
 
         epoch_loss = running_loss / len(train_loader)
         epoch_acc = 100. * correct / total
