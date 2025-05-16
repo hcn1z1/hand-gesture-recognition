@@ -45,23 +45,20 @@ def preprocess_split(split, input_dir, output_dir, csv_file):
     df = pd.read_csv(csv_file)
     
     # Get the list of valid video_ids from CSV
-    valid_video_ids = set(df['video_id'].astype(str))
 
     # Iterate over folders in the input directory
     for _,row in df.iterrows():
-        folder_name = str(row['id'])
+        folder_name = str(row['video_id'])
         folder_path = os.path.join(input_dir, folder_name)
         
         if not os.path.isdir(folder_path):
             continue  # Skip files
 
-        video_id = str(row['video_id'])
+        video_id = str(row.get('label_id'))
 
-        if video_id not in valid_video_ids:
-            print(f"Skipping {video_id}, not in CSV")
-            continue
-
-        output_video_dir = os.path.join(output_dir, split,video_id)
+        if video_id == 'nan':
+            output_video_dir = os.path.join(output_dir, split)
+        else : output_video_dir = os.path.join(output_dir, split,video_id)
         os.makedirs(output_video_dir, exist_ok=True)
 
         # Copy contents (not the folder itself)
