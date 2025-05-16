@@ -6,6 +6,7 @@ from tqdm import tqdm
 from dataset.load import JesterSequenceDataset
 from .model import C3DGestureLSTM
 import torchvision.transforms as transforms
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 actions = [
     "Doing other things", "No gesture", "Rolling Hand Backward", "Rolling Hand Forward",
@@ -37,7 +38,10 @@ def train(num_epochs, batch_size, lr):
 
     model = C3DGestureLSTM(num_classes=18).to(device)
     criterion = nn.CrossEntropyLoss(weight=weights)
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9, weight_decay=1e-4)
+    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+
+    # Add ReduceLROnPlateau scheduler
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=5, verbose=True, min_lr=1e-5)
 
     best_val_loss = float('inf')
     for epoch in range(num_epochs):
@@ -71,6 +75,9 @@ def train(num_epochs, batch_size, lr):
         val_loss /= len(val_loader)
         val_acc = 100. * val_correct / len(val_dataset)
         print(f"Epoch {epoch+1}: Train Loss: {train_loss:.3f}, Acc: {train_acc:.2f}%, Val Loss: {val_loss:.3f}, Acc: {val_acc:.2f}%")
+
+        # Step the scheduler with the current validation loss
+        scheduler.step(val_loss)
 
         if val_loss < best_val_loss:
             best_val_loss = val_loss
