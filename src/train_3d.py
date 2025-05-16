@@ -25,8 +25,8 @@ def train(num_epochs, batch_size, lr):
         transforms.RandomHorizontalFlip(p=0.5)
     ])
 
-    train_dataset = JesterSequenceDataset('data/jester_processed/', split='train', transform=transform)
-    val_dataset = JesterSequenceDataset('data/jester_processed/', split='val', transform=transform)
+    train_dataset = JesterSequenceDataset('data/jester_processed/train', split='train', transform=transform)
+    val_dataset = JesterSequenceDataset('data/jester_processed/val', split='val', transform=transform)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
 
@@ -45,7 +45,8 @@ def train(num_epochs, batch_size, lr):
         running_loss, correct = 0.0, 0
         for clips, joints, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
             clips, joints, labels = clips.to(device), joints.to(device), labels.to(device)
-            clips = clips.permute(0, 2, 1, 3, 4)  # [B, C, T, H, W]
+            clips = clips.permute(0, 2, 1, 3, 4)  # [B, T, C, H, W] -> [B, C, T, H, W]
+            print(f"clips shape: {clips.shape}, joints shape: {joints.shape}")
             optimizer.zero_grad()
             outputs = model(clips, joints)
             loss = criterion(outputs, labels)
