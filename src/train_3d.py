@@ -55,7 +55,7 @@ def train(num_epochs, batch_size, lr):
     best_val_loss = float('inf')
     patience = 5
     patience_counter = 0
-
+    print("Starting training...")
     for epoch in range(num_epochs):
         # Training loop
         model.train()
