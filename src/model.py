@@ -10,7 +10,7 @@ class MyModel(nn.Module):
         self.conv3 = nn.Conv2d(32, 64, kernel_size=3, padding=1)  # 25x25x32 → 25x25x64
         self.conv4 = nn.Conv2d(64, 32, kernel_size=3, padding=1)  # 12x12x64 → 12x12x32
         self.pool = nn.MaxPool2d(2, 2)
-        self.fc1 = nn.Linear(12 * 12 * 32, 128)  # 4608 → 128
+        self.fc1 = nn.Linear(6 * 6 * 32, 128)  # 4608 → 128
         self.fc2 = nn.Linear(128, num_classes)  # 128 → 27
         self.relu = nn.ReLU()
         self.dropout = nn.Dropout(0.5)
