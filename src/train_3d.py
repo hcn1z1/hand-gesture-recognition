@@ -43,7 +43,7 @@ def train(num_epochs, batch_size, lr):
     weights = weights / weights.sum() * len(actions)
     weights = weights.to(device)
 
-    model = C3DGestureLSTM(num_classes=18).to(device)
+    model = ImprovedGestureModel(num_classes=18).to(device)
     criterion = nn.CrossEntropyLoss(weight=weights)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=4)
