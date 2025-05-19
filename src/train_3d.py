@@ -59,7 +59,7 @@ def train(num_epochs, batch_size, lr):
         model.train()
         running_loss, correct = 0.0, 0
         for clips, joints, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
-            clips, joints, labels = clips.to(device) #, joints.to(device), labels.to(device)
+            clips, joints, labels = clips.to(device) , joints.to(device), labels.to(device)
             clips = clips.permute(0, 2, 1, 3, 4)  # [B, C, T, H, W]
             optimizer.zero_grad()
             with autocast():
