@@ -43,7 +43,7 @@ def train(num_epochs, batch_size, lr):
     weights = weights / weights.sum() * len(actions)
     weights = weights.to(device)
 
-    model = ImprovedGestureModel(num_classes=18).to(device)
+    model = C3DGestureLSTM(num_classes=18).to(device)
     criterion = nn.CrossEntropyLoss(weight=weights)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=4)
@@ -59,11 +59,11 @@ def train(num_epochs, batch_size, lr):
         model.train()
         running_loss, correct = 0.0, 0
         for clips, joints, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
-            clips, joints, labels = clips.to(device), joints.to(device), labels.to(device)
+            clips, joints, labels = clips.to(device) #, joints.to(device), labels.to(device)
             clips = clips.permute(0, 2, 1, 3, 4)  # [B, C, T, H, W]
             optimizer.zero_grad()
             with autocast():
-                outputs = model(clips, joints)
+                outputs = model(clips)#, joints)
                 loss = criterion(outputs, labels)
             scaler.scale(loss).backward()
             scaler.unscale_(optimizer)
@@ -85,7 +85,7 @@ def train(num_epochs, batch_size, lr):
                 clips, joints, labels = clips.to(device), joints.to(device), labels.to(device)
                 clips = clips.permute(0, 2, 1, 3, 4)
                 with autocast():
-                    outputs = model(clips, joints)
+                    outputs = model(clips)#, joints)
                     val_loss += criterion(outputs, labels).item()
                     val_correct += (outputs.argmax(1) == labels).sum().item()
 
