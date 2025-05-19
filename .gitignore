@@ -4,3 +4,5 @@ __pycache__/
 *.pyd
 *.egg-info/
 *.egg
+checkpoints/
+*.log
