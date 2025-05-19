@@ -213,7 +213,7 @@ class EarlyStopping:
         
 
 class C3DImproved(nn.Module):
-    def __init__(self, num_classes=18, joint_dim=144, lstm_hidden_size=512):
+    def __init__(self, num_classes=18, joint_dim=144, lstm_hidden_size=512, num_joints=48, coords=3):
         super().__init__()
         # 3D CNN to process video clips
         self.cnn3d = nn.Sequential(
@@ -237,6 +237,8 @@ class C3DImproved(nn.Module):
         self.dropout = nn.Dropout(0.5)
         self.fc = nn.Linear(lstm_hidden_size, num_classes)
         self.joint_dim = joint_dim
+        self.num_joints = num_joints
+        self.coords = coords
 
     def forward(self, clip, joint_stream=None):
         # clip shape: [B, C, T, H, W]
@@ -250,6 +252,11 @@ class C3DImproved(nn.Module):
         if joint_stream is None:
             joint_stream = torch.zeros(B, T, self.joint_dim, device=clip.device)
         else:
+            # Expect joint_stream as [B, T, num_joints, coords] and reshape to [B, T, joint_dim]
+            if joint_stream.dim() == 4:
+                assert joint_stream.shape == (B, T, self.num_joints, self.coords), \
+                    f"Expected joint_stream shape {(B, T, self.num_joints, self.coords)}, got {joint_stream.shape}"
+                joint_stream = joint_stream.view(B, T, self.num_joints * self.coords)
             assert joint_stream.shape == (B, T, self.joint_dim), \
                 f"Expected joint_stream shape {(B, T, self.joint_dim)}, got {joint_stream.shape}"
         
