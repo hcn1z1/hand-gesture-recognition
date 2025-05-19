@@ -59,6 +59,11 @@ def train(num_epochs, batch_size, lr):
         model.train()
         running_loss, correct = 0.0, 0
         for clips, joints, labels in tqdm(train_loader, desc=f"Epoch {epoch+1}/{num_epochs}"):
+            assert not torch.isnan(clips).any(), "NaN in clips"
+            assert not torch.isinf(clips).any(), "Inf in clips"
+            assert not torch.isnan(joints).any(), "NaN in joints"
+            assert not torch.isinf(joints).any(), "Inf in joints"
+            assert not torch.isnan(labels).any(), "NaN in labels"
             clips, joints, labels = clips.to(device) , joints.to(device), labels.to(device)
             clips = clips.permute(0, 2, 1, 3, 4)  # [B, C, T, H, W]
             optimizer.zero_grad()
@@ -82,6 +87,11 @@ def train(num_epochs, batch_size, lr):
         val_loss, val_correct = 0.0, 0
         with torch.no_grad():
             for clips, joints, labels in val_loader:
+                assert not torch.isnan(clips).any(), "NaN in clips"
+                assert not torch.isinf(clips).any(), "Inf in clips"
+                assert not torch.isnan(joints).any(), "NaN in joints"
+                assert not torch.isinf(joints).any(), "Inf in joints"
+                assert not torch.isnan(labels).any(), "NaN in labels"
                 clips, joints, labels = clips.to(device), joints.to(device), labels.to(device)
                 clips = clips.permute(0, 2, 1, 3, 4)
                 with autocast():
