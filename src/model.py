@@ -43,7 +43,7 @@ class CM2(nn.Module):
             nn.Linear(256, 27)
         )
 
-    def forward(self, x):
+    def forward(self, x, joint_stream=None):
         x = self.features(x)
         x = torch.flatten(x, 1)
         x = self.classifier(x)
@@ -74,7 +74,7 @@ class C3DGesture(nn.Module):
         )
         self.classifier = nn.Linear(256, num_classes)
 
-    def forward(self, x):
+    def forward(self, x, joint_stream=None):
         # x: (B, 3, T, H, W)
         x = self.features(x)          # -> (B, 256, 1, 1, 1)
         x = x.view(x.size(0), -1)     # -> (B, 256)
