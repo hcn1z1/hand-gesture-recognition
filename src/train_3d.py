@@ -85,7 +85,7 @@ def train(num_epochs, batch_size, lr):
                 clips, joints, labels = clips.to(device), joints.to(device), labels.to(device)
                 clips = clips.permute(0, 2, 1, 3, 4)
                 with autocast():
-                    outputs = model(clips, None)
+                    outputs = model(clips, joints)
                     val_loss += criterion(outputs, labels).item()
                     val_correct += (outputs.argmax(1) == labels).sum().item()
 
