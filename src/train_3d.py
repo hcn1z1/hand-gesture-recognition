@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from tqdm import tqdm
 from dataset.load import JesterSequenceDataset
-from .model import C3DGestureLSTM, ImprovedGestureModel, EarlyStopping, C3DGesture
+from .model import C3DGestureLSTM, ImprovedGestureModel, EarlyStopping, C3DGesture, C3DImproved
 import torchvision.transforms as transforms
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from torch.utils.tensorboard import SummaryWriter
@@ -43,7 +43,7 @@ def train(num_epochs, batch_size, lr):
     weights = weights / weights.sum() * len(actions)
     weights = weights.to(device)
 
-    model = ImprovedGestureModel(num_classes=18).to(device)
+    model = C3DImproved(num_classes=18).to(device)
     criterion = nn.CrossEntropyLoss(weight=weights)
     optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=4)
