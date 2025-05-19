@@ -99,13 +99,13 @@ def train(num_epochs, batch_size, lr):
         early_stopping(val_loss, model)
         if val_loss < best_val_loss:
             best_val_loss = val_loss
-            torch.save(model.state_dict(), best_model_path)
+            torch.save(model, best_model_path)
             print(f"Saved best model to {best_model_path}")
 
         if early_stopping.early_stop:
             print("Early stopping triggered")
             break
 
-    model.load_state_dict(torch.load(best_model_path))
+    model = torch.load(best_model_path)
     writer.close()
     return model
