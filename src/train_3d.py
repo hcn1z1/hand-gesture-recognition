@@ -45,7 +45,7 @@ def train(num_epochs, batch_size, lr):
 
     model = C3DImproved(num_classes=18).to(device)
     criterion = nn.CrossEntropyLoss(weight=weights)
-    optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-4)
+    optimizer = optim.SGD(model.parameters(), lr=lr, weight_decay=1e-4, momentum=0.9)
     scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=4)
     early_stopping = EarlyStopping(patience=7, min_delta=0.001, mode='min')
     scaler = GradScaler()  # For mixed precision training
