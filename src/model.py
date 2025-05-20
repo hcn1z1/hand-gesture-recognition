@@ -112,7 +112,7 @@ class ImprovedGestureModel(nn.Module):
         return x
     
 class EarlyStopping:
-    def __init__(self, patience=74, min_delta=0, mode='min'):
+    def __init__(self, patience=7, min_delta=0, mode='min'):
         self.patience = patience
         self.min_delta = min_delta
         self.mode = mode
