@@ -7,6 +7,7 @@ from PIL import UnidentifiedImageError
 from PIL import Image
 import torchvision.transforms as transforms
 import torch
+import random
 
 actions = [
     "Doing other things", "No gesture", "Rolling Hand Backward", "Rolling Hand Forward",
@@ -96,46 +97,54 @@ class JesterSequenceDataset(Dataset):
         total_frames = len(frame_paths)
         m = self.frames_per_clip
         
-        # Determine indices based on total_frames and desired frames_per_clip
-        if total_frames <= m:
-            # If there are fewer or equal frames than required, use all frames
+        # Handle edge cases
+        if m <= 0:
+            frames = []
+            joint_stream = torch.tensor(np.empty((0, 48, 3)), dtype=torch.float32)
+        elif total_frames <= m:
+            # Use all frames if total_frames <= m
             indices = list(range(total_frames))
+            frames = [self.transform(Image.open(p).convert('RGB')) for p in frame_paths]
+            joint_data = np.load(joint_path)
+            joint_stream = torch.tensor(joint_data, dtype=torch.float32)  # [T, 48, 3]
         else:
-            # Calculate number of frames for the beginning and end segments
-            k = m // 3
-            # Ensure k is at least 1 for small m
-            if k == 0:
-                k = 1
+            # Step 1: Calculate step size and select initial frames
+            step = total_frames // m  # Integer division to get step size
+            indices = []
+            for i in range(0, total_frames, step):
+                if len(indices) < m and i < total_frames:
+                    indices.append(i)
             
-            # First k frames: indices 0 to k-1
-            first_indices = list(range(k))
+            # Step 2: If we have fewer than m frames, select additional frames
+            if len(indices) < m:
+                remaining_needed = m - len(indices)
+                available_indices = set(range(total_frames)) - set(indices)
+                threshold = 0.7
+                
+                # Iterate over remaining indices and select based on threshold
+                while remaining_needed > 0 and available_indices:
+                    for idx in list(available_indices):
+                        if random.random() > threshold:  # Random float between 0 and 1
+                            indices.append(idx)
+                            available_indices.remove(idx)
+                            remaining_needed -= 1
+                            if remaining_needed == 0:
+                                break
             
-            # Last k frames: indices from (total_frames - k) to total_frames-1
-            last_indices = list(range(total_frames - k, total_frames))
+            # Ensure exactly m indices (truncate if over)
+            indices = sorted(indices[:m])
             
-            # Middle frames: remaining count, centered in the sequence
-            middle_count = m - 2 * k
-            if middle_count > 0:
-                # Start index for middle, ensuring it’s centered
-                start_idx = (total_frames - middle_count) // 2
-                middle_indices = list(range(start_idx, start_idx + middle_count))
-            else:
-                middle_indices = []
+            # Select frame paths and load frames
+            selected_frame_paths = [frame_paths[i] for i in indices]
+            frames = [self.transform(Image.open(p).convert('RGB')) for p in selected_frame_paths]
             
-            # Combine indices from all three segments
-            indices = first_indices + middle_indices + last_indices
+            # Load joint data and select corresponding entries
+            joint_data = np.load(joint_path)
+            selected_joint_data = joint_data[indices]
+            joint_stream = torch.tensor(selected_joint_data, dtype=torch.float32)  # [T, 48, 3]
         
-        # Select frame paths using the indices
-        selected_frame_paths = [frame_paths[i] for i in indices]
-        
-        # Load and transform frames
-        frames = [self.transform(Image.open(p).convert('RGB')) for p in selected_frame_paths]
+        # Stack frames into a clip
         clip = torch.stack(frames)  # [T, C, H, W]
-        
-        # Load joint data and select corresponding entries
-        joint_data = np.load(joint_path)
-        selected_joint_data = joint_data[indices]
-        joint_stream = torch.tensor(selected_joint_data, dtype=torch.float32)  # [T, 48, 3]
         
         return clip, joint_stream, label
 
