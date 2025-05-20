@@ -33,8 +33,8 @@ def train(num_epochs, batch_size, lr):
         transforms.ColorJitter(brightness=0.2, contrast=0.2)
     ])
 
-    train_dataset = JesterSequenceDataset('data/jester_processed/', split='train', transform=transform, frames_per_clip=12)
-    val_dataset = JesterSequenceDataset('data/jester_processed/', split='val', transform=transform, frames_per_clip=12)
+    train_dataset = JesterSequenceDataset('data/jester_processed/', split='train', transform=transform, frames_per_clip=16)
+    val_dataset = JesterSequenceDataset('data/jester_processed/', split='val', transform=transform, frames_per_clip=16)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True)
 

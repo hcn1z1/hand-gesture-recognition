@@ -93,9 +93,50 @@ class JesterSequenceDataset(Dataset):
 
     def __getitem__(self, idx):
         frame_paths, joint_path, label = self.samples[idx]
-        frames = [self.transform(Image.open(p).convert('RGB')) for p in frame_paths[:self.frames_per_clip]]
+        total_frames = len(frame_paths)
+        m = self.frames_per_clip
+        
+        # Determine indices based on total_frames and desired frames_per_clip
+        if total_frames <= m:
+            # If there are fewer or equal frames than required, use all frames
+            indices = list(range(total_frames))
+        else:
+            # Calculate number of frames for the beginning and end segments
+            k = m // 3
+            # Ensure k is at least 1 for small m
+            if k == 0:
+                k = 1
+            
+            # First k frames: indices 0 to k-1
+            first_indices = list(range(k))
+            
+            # Last k frames: indices from (total_frames - k) to total_frames-1
+            last_indices = list(range(total_frames - k, total_frames))
+            
+            # Middle frames: remaining count, centered in the sequence
+            middle_count = m - 2 * k
+            if middle_count > 0:
+                # Start index for middle, ensuring it’s centered
+                start_idx = (total_frames - middle_count) // 2
+                middle_indices = list(range(start_idx, start_idx + middle_count))
+            else:
+                middle_indices = []
+            
+            # Combine indices from all three segments
+            indices = first_indices + middle_indices + last_indices
+        
+        # Select frame paths using the indices
+        selected_frame_paths = [frame_paths[i] for i in indices]
+        
+        # Load and transform frames
+        frames = [self.transform(Image.open(p).convert('RGB')) for p in selected_frame_paths]
         clip = torch.stack(frames)  # [T, C, H, W]
-        joint_stream = torch.tensor(np.load(joint_path)[:self.frames_per_clip], dtype=torch.float32)  # [T, 48, 3]
+        
+        # Load joint data and select corresponding entries
+        joint_data = np.load(joint_path)
+        selected_joint_data = joint_data[indices]
+        joint_stream = torch.tensor(selected_joint_data, dtype=torch.float32)  # [T, 48, 3]
+        
         return clip, joint_stream, label
 
     def get_label_counts(self):
