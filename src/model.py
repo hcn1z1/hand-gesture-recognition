@@ -120,7 +120,7 @@ class C3DImproved(nn.Module):
             nn.GELU(),
             nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2)),
             nn.Conv3d(128, 256, kernel_size=(3, 3, 3), padding=(1, 1, 1)),
-            nn.LayerNorm([256, 1,  1, 1]),  # Adjusted for 3D
+            nn.LayerNorm([16, 256, 16, 11, 9]),  # Adjusted for 3D
             nn.GELU(),
             nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2)),
         )
