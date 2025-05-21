@@ -3,8 +3,10 @@ from dataset.load import JesterSequenceDataset  # <- your new loader
 import torch.nn as nn
 import torch.optim as optim
 import torch
-from .model import C3DGesture  # or ConvLSTM, etc.
+ # or ConvLSTM, etc.
 from tqdm import tqdm
+
+C3DGesture = object  # Placeholder for your model class
 
 def train(num_epochs, batch_size, lr):
     dataset = JesterSequenceDataset('data/jester/train', split='train', frames_per_clip=12)
