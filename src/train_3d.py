@@ -26,7 +26,7 @@ def train(num_epochs, batch_size, lr):
     log_dir = os.path.join('runs', 'gesture_recognition_' + datetime.datetime.now().strftime("%Y%m%d-%H%M%S"))
     writer = SummaryWriter(log_dir)
     transform = transforms.Compose([
-        transforms.Resize((47, 37), interpolation=transforms.InterpolationMode.BILINEAR),
+        transforms.Resize((100, 100), interpolation=transforms.InterpolationMode.BILINEAR),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
         transforms.RandomHorizontalFlip(p=0.5),
