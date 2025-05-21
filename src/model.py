@@ -112,7 +112,7 @@ class C3DImproved(nn.Module):
         # 3D CNN to process video clips
         self.cnn3d = nn.Sequential(
             nn.Conv3d(3, 64, kernel_size=(3, 3, 3), padding=(1, 1, 1)),
-            nn.LayerNorm(64),
+            nn.LayerNorm([64, 1,  1, 1]),  # Adjusted for 3D
             nn.GELU(),
             nn.MaxPool3d(kernel_size=(1, 2, 2), stride=(1, 2, 2)),
             nn.Conv3d(64, 128, kernel_size=(3, 3, 3), padding=(1, 1, 1)),
